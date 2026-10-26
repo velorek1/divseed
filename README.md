@@ -1,6 +1,6 @@
 # DIVseed — alpha 0.1
 
-A small Linux text editor derived from DIV Games Studio, preserving its bitmap fonts, floating menus and desktop character.
+A small Linux text editor derived from DIV Games Studio, preserving its bitmap fonts, floating menus and desktop character. (AI PROJECT)
 
 ## Build
 
