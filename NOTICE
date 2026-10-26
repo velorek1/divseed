@@ -1,0 +1,26 @@
+DIVseed — derived from DIV Games Studio
+GNU General Public License version 3; see LICENSE.
+
+Upstream: https://github.com/DIVGAMES/DIV-Games-Studio
+Source commit: 77556912335d0a1b0efea855d4eb2490cf382128
+Original work belongs to the DIV Games Studio contributors. This is an
+independent derivative, not an official DIV release.
+
+Retained/adapted components:
+- divwindo.c: indexed drawing, gradient table, bitmap text and button bevels.
+- div.c: front-at-zero window stack; adapted window lifecycle, collision
+  dimming, moving outlines and the extrude opening effect. The SDL animation
+  advances by elapsed time rather than blocking the event loop.
+- divedit.c: line cache/contiguous buffer and insertion, deletion, splitting,
+  joining and navigation, adapted for general text and UTF-8 scalar positions.
+- system/SYS08X11.BIN and system/grande.fon: unchanged original bitmap fonts.
+- system/GRAF_G.DIV: unchanged icon role pixels 1, 2, 35, 37, 39, 40, 43,
+  51, 52, 55 and 56, embedded in src/div_icons.h; cursor control points retained.
+
+SDL events/presentation, bounded drawing adapters, file safety, POSIX browser,
+Unicode validation, history, clipboard, help and build integration are new or
+adapted for DIVseed under GPLv3. Existing upstream comments are retained.
+
+src/unicode_font.h contains DIVseed Unicode, a generated bitmap fallback
+from DejaVu Sans Mono. The Bitstream Vera license and DejaVu notices are
+included in assets/UNICODE-FONT-LICENSE. The original ASCII font stays in use.
