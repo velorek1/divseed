@@ -163,7 +163,7 @@ static void history_push(EditHistory *h,EditSnapshot *s) {
 }
 static void commit(Document *d,EditSnapshot *old) {
  if(old->length!=d->file_lon || memcmp(old->text,d->buffer,d->file_lon)) {
-  history_clear(&d->redo);history_push(&d->undo,old);
+  d->revision++;history_clear(&d->redo);history_push(&d->undo,old);
  } else snapshot_free(old);
  d->anchor=document_position(d);d->message=NULL;d->scroll_free=0;
  d->modified=d->saved ? strcmp(d->buffer,d->saved)!=0 : d->file_lon!=0;
@@ -232,7 +232,7 @@ static int restore_history(Document *d,EditHistory *from,EditHistory *to) {
  if(!prepare(d,s->length>d->file_lon?s->length-d->file_lon:0)) return 0;
  EditSnapshot *current=snapshot(d);if(!current) return 0;
  from->count--;from->bytes-=s->length+1;
- memcpy(d->buffer,s->text,s->length+1);d->file_lon=s->length;
+ d->revision++;memcpy(d->buffer,s->text,s->length+1);d->file_lon=s->length;
  seek_position(d,s->position);d->anchor=s->anchor;d->goal=s->goal;
  d->primera_linea=s->first_row;d->primera_columna=s->first_col;d->modified=s->modified;
  snapshot_free(s);history_push(to,current);d->message=NULL;
@@ -244,3 +244,40 @@ int document_redo(Document *d) {return restore_history(d,&d->redo,&d->undo);}
 void document_mark_saved(Document *d,char *saved) {free(d->saved);d->saved=saved;d->modified=0;}
 
 void document_clear_history(Document *d) {history_clear(&d->undo);history_clear(&d->redo);}
+
+void document_page(Document *d,int direction,size_t rows,int extend) {
+ size_t goal=d->goal;
+ for(size_t i=0;i<rows;i++) document_move(d,direction<0?ED_UP:ED_DOWN,extend);
+ d->goal=goal;
+ if(direction<0) d->primera_linea=d->primera_linea>rows?d->primera_linea-rows:1;
+ else {size_t max=d->num_lineas>rows?d->num_lineas-rows+1:1;
+ d->primera_linea=d->primera_linea+rows>max?max:d->primera_linea+rows;}
+}
+int document_find(Document *d,const char *query) {
+ size_t n=strlen(query);if(!n || !utf8_valid(query,n,1)) return 0;
+ size_t pos=document_position(d);const char *hit=strstr(d->buffer+pos,query);
+ if(!hit) hit=strstr(d->buffer,query);
+ if(!hit) {d->message="Text not found";return 0;}
+ size_t a=(size_t)(hit-d->buffer);seek_position(d,a+n);d->anchor=a;d->message=NULL;return 1;
+}
+int document_replace(Document *d,const char *query,const char *replacement,int all) {
+ size_t n=strlen(query),r=strlen(replacement),a,b,count=0;
+ if(!n || !utf8_valid(query,n,1) || !utf8_valid(replacement,r,1)) return 0;
+ if(!all) {
+  if(!document_selection(d,&a,&b) || b-a!=n || memcmp(d->buffer+a,query,n)) {
+   if(!document_find(d,query)) return 0;
+  }
+  return r?document_paste(d,replacement):document_delete_selection(d);
+ }
+ for(const char *hit=d->buffer;(hit=strstr(hit,query));hit+=n) count++;
+ if(!count) {d->message="Text not found";return 0;}
+ if(r>n && count>(SIZE_MAX-d->file_lon-1)/(r-n)) return 0;
+ size_t size=r>=n?d->file_lon+count*(r-n):d->file_lon-count*(n-r);
+ char *text=malloc(size+1);if(!text) {d->message="Out of memory: text unchanged";return 0;}
+ const char *src=d->buffer,*hit;char *out=text;
+ while((hit=strstr(src,query))) {size_t len=(size_t)(hit-src);memcpy(out,src,len);out+=len;memcpy(out,replacement,r);out+=r;src=hit+n;}
+ strcpy(out,src);
+ if(!prepare(d,size>d->file_lon?size-d->file_lon:0)) {free(text);return 0;}
+ EditSnapshot *old=snapshot(d);if(!old) {free(text);return 0;}
+ memcpy(d->buffer,text,size+1);d->file_lon=size;free(text);seek_position(d,0);commit(d,old);return 1;
+}

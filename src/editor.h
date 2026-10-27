@@ -16,6 +16,7 @@ typedef struct {
  size_t linea,columna,num_lineas,primera_linea,primera_columna,goal;
  size_t anchor;
  EditHistory undo,redo;
+ size_t revision;
  int modified,scroll_free;
  const char *message;
 } Document;
@@ -24,6 +25,9 @@ Document *document_new(void);
 void document_free(Document *d);
 int document_text(Document *d,const char *text);
 int document_key(Document *d,EditKey key);
+void document_page(Document *d,int direction,size_t rows,int extend);
+int document_find(Document *d,const char *query);
+int document_replace(Document *d,const char *query,const char *replacement,int all);
 void document_view(Document *d,size_t cols,size_t rows);
 size_t document_position(const Document *d);
 int document_selection(const Document *d,size_t *start,size_t *end);

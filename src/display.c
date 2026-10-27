@@ -7,3 +7,9 @@ int display_configure(SDL_Renderer *renderer,SDL_Texture *texture) {
  if(SDL_RenderSetIntegerScale(renderer,SDL_FALSE)) return 0;
  return 1;
 }
+
+/* Desktop fullscreen keeps the monitor mode and SDL restores window geometry. */
+int display_toggle_fullscreen(SDL_Window *window) {
+ Uint32 mode=SDL_GetWindowFlags(window)&SDL_WINDOW_FULLSCREEN_DESKTOP;
+ return SDL_SetWindowFullscreen(window,mode?0:SDL_WINDOW_FULLSCREEN_DESKTOP)==0;
+}

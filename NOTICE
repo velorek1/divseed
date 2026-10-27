@@ -18,7 +18,7 @@ Retained/adapted components:
   51, 52, 55 and 56, embedded in src/div_icons.h; cursor control points retained.
 
 SDL events/presentation, bounded drawing adapters, file safety, POSIX browser,
-Unicode validation, history, clipboard, help and build integration are new or
+Unicode validation, lexical C highlighting, history, clipboard, help, C keyword reminders, display controls and build integration are new or
 adapted for DIVseed under GPLv3. Existing upstream comments are retained.
 
 src/unicode_font.h contains DIVseed Unicode, a generated bitmap fallback

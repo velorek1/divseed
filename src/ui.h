@@ -1,8 +1,9 @@
 #ifndef DIVSEED_UI_H
 #define DIVSEED_UI_H
 #include "editor.h"
-#define UI_WIDTH 960
-#define UI_HEIGHT 600
+extern int ui_width,ui_height;
+#define UI_WIDTH ui_width
+#define UI_HEIGHT ui_height
 #include <SDL.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -26,6 +27,9 @@ struct tventana {
  Uint32 opened_at;
  int minimized,maximized,old_x,old_y,old_an,old_al,z;
  byte *ptr;
+ int c_syntax; /* -1: filename, 0: plain, 1: C */
+ size_t syntax_revision;
+ byte *syntax_colors;
  Document *doc;
 };
 extern struct tventana ventana[max_windows];
@@ -53,6 +57,11 @@ void ui_close(void);
 void ui_event(const SDL_Event*);
 void ui_draw(byte*);
 void ui_animations(int enabled);
+int ui_set_resolution(int width,int height);
+int ui_request_resolution(const char *text);
+int ui_display_request(int *width,int *height,int *fullscreen);
+void ui_error(const char *message);
+int ui_open(const char *path);
 void ui_draw_pointer(byte*,int,int);
 void ui_destroy(void);
 #endif
