@@ -35,3 +35,4 @@ Drag titles to move windows and menus; resize from the bottom-right corner. Wind
 UTF-8 editing, multiple documents, file browsing and safe temporary-file saves are supported. This is an alpha: keep backups. Mixed line endings are rejected. Unicode uses one cell per scalar, with incomplete glyph coverage and no shaping or grapheme layout.
 
 GPLv3. Based on [DIV Games Studio](https://github.com/DIVGAMES/DIV-Games-Studio). Attribution and font notices: `NOTICE`, `LICENSE`, `assets/UNICODE-FONT-LICENSE`.
+![Alt text](divseed.jpg?raw=true "Demo")
