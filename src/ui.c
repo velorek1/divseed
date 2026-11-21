@@ -83,7 +83,7 @@ typedef struct {int x,y,w,h,open,z;const char *title;const char **items;int coun
 static const char *main_items[]={"File","Edit","View","Help","Display","Exit"};
 static const char *file_items[]={"New       Ctrl+N","Open      Ctrl+O","Save      Ctrl+S","Save As   Ctrl+Shift+S","Close     Ctrl+W","Exit","Compile   F5","Run       F7","Terminal output   F6"};
 static const char *edit_items[]={"Undo","Redo","Cut","Copy","Paste","Select All","Find      Ctrl+F","Replace   Ctrl+H","Go to line   Ctrl+G"};
-static const char *view_items[]={"Minimize","Maximize / Restore","Toggle C colors  Ctrl+K","Line numbers  Ctrl+L"};
+static const char *view_items[]={"Minimize","Maximize / Restore","Toggle C colors  Ctrl+K","0 Line numbers  Ctrl+L"};
 static const char *help_items[]={"Commands / F1","C reference","About"};
 static int requested_w,requested_h,requested_fullscreen;
 static char resolution_input[32]="960x600";
@@ -602,7 +602,7 @@ static void draw_menu(byte *dst,int index) {
   int disabled=index==1 && (((i==FILE_COMPILE || i==FILE_RUN) && !compile_enabled()) ||
                            (i==FILE_COMPILER_OUTPUT && !compiler_output));
   int selected=!disabled && hover && (mouse_y-m->y-24)/22==i;
-  const char *item=index==3 && i==3 && v.tipo && v.line_numbers?"Hide line numbers  Ctrl+L":m->items[i];
+  const char *item=index==3 && i==3 && v.tipo && v.line_numbers?"1 Line numbers  Ctrl+L":m->items[i];
   if(selected) label(dst,W,H,m->x+11,m->y+25+i*22,item,11);
   label(dst,W,H,m->x+10,m->y+24+i*22,item,disabled?c2:selected?10:fg);
  }
