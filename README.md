@@ -1,38 +1,69 @@
 # DIVseed — alpha 0.4
 
-A small Linux text editor derived from DIV Games Studio, preserving its bitmap fonts, floating menus and desktop character. (AI EXPERIMENT)
+DIVseed is a small Linux text editor derived from DIV Games Studio. This AI-assisted experiment brings DIV's bitmap fonts, raised buttons, floating menus, and desktop animations to a multi-document editor with built-in C tools.
 
-## Build
+![DIVseed editor screenshot](divseed.jpg)
 
-Requires a C compiler, Make, pkg-config and **SDL2 development libraries (2.0.18+)**. On Debian/Ubuntu: `sudo apt install build-essential pkg-config libsdl2-dev`.
+## Build and launch
+
+Requires a C compiler, Make, pkg-config, and SDL2 development libraries (2.0.18 or newer). On Debian or Ubuntu, install them with `sudo apt install build-essential pkg-config libsdl2-dev`.
 
 ```sh
 make
 ./divseed
-./divseed file.txt
+./divseed file.txt "another file.c"
 ```
 
-If SDL2 is missing, the build explains what to install. `make deps` offers to install the required packages on Debian/Ubuntu, Fedora or Arch, asking first. `make run` starts the editor; `make clean` removes build files. Keep `assets/` beside the executable.
+Keep `assets/` beside the executable. `make deps` offers to install missing dependencies on Debian, Ubuntu, Fedora, or Arch. `make run` launches the editor, and `make clean` removes build files. Use `--` before a filename that starts with a dash.
 
-## Use
+## Editing and navigation
 
-Ctrl+N: new · Ctrl+O: open · Ctrl+S: save · Ctrl+Shift+S: save as · Ctrl+W: close. Ctrl+Z/Y: undo/redo. Ctrl+C/X/V: clipboard. F1: help.
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+N`, `Ctrl+O` | New document, open file |
+| `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+W` | Save, Save As, close document |
+| `Ctrl+C`, `Ctrl+X`, `Ctrl+V` | Copy, cut, paste |
+| `Ctrl+Z`, `Ctrl+Y` | Undo, redo |
+| `Ctrl+L` | Show or hide line numbers in the active editor window |
+| `Ctrl+G` | Jump to the first column of a line |
+| `Home`, `End` | Jump to the beginning or end of the file |
+| `Page Up`, `Page Down` | Move one visible page. Keypad `9` and `3` work with Num Lock off |
+| `F1` | Open Help |
 
-Page Up/Down moves by the visible editor height; Shift extends selection. The caret blinks and resets when typing or navigating. Text fields support clicking, Left/Right, Home/End, Backspace/Delete and Ctrl+A to clear.
+Hold Shift while navigating to extend the selection. Tab inserts four spaces in the editor. Existing tab bytes are preserved and rendered as blank cells.
 
-Edit → Find (Ctrl+F) and Replace (Ctrl+H) search literal, case-sensitive UTF-8 text in the current document, wrapping at the end. Replace changes the matching selection (or finds the next match); Replace all is one undoable operation. Empty replacement deletes matches. Tab switches fields; Enter finds the next match; Esc closes. Search fields accept up to 511 bytes; regex, case folding and multi-file search are not provided.
+In the file picker, Tab and Shift+Tab cycle through the filename, directories, files, filter, Accept, and Cancel. Enter activates the focused control. Confirmation dialogs also support Tab and Enter. Within text fields, Home and End move to the ends of the field, and Ctrl+A clears it.
 
-Starts at **960×600**. Display offers common resolutions, custom sizes from 800×600 to 3840×2160, and fullscreen. **Alt+Enter** toggles desktop fullscreen. Up to six custom sizes can be added for the current session; settings are not saved between runs.
+## Find and Replace
 
-Open files with `./divseed file.txt` (multiple files and quoted paths work; use `--` before names starting with `-`). TAB inserts four spaces as one undoable edit. Existing tab bytes are preserved and shown as blank cells.
+Use **Edit → Find** (`Ctrl+F`) or **Edit → Replace** (`Ctrl+H`) to search for literal UTF-8 text in the active document. Search ignores case by default and wraps at the end of the document. Check **Match case** to require exact capitalization. The setting is shared across both dialogs for the session.
 
-The blue **C reference** button opens scrollable keyword reminders for C11. Scope follows the [WG14 C11 draft](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf); this is a brief guide, not the full specification.
+Enter finds the next match. Tab moves focus, Space toggles the focused checkbox, and Esc closes the dialog. Find Next selects the matching text and highlights the whole line in amber. The highlight stays visible after closing the dialog while the match remains selected.
 
-C syntax colors are automatic for `.c` and `.h` files. Use View → Toggle C colors for untitled files or to turn them off. Keywords, comments, strings/characters, numbers and preprocessor directives are colored; this is lexical highlighting, not a compiler. Selection remains clearly visible.
+Replace updates one match, and Replace All is one undoable edit. An empty replacement deletes the matched text. Search fields accept up to 511 bytes.
 
-Drag titles to move windows and menus; resize from the bottom-right corner. Windows dim when covered, show a white border while moving, and open with an expanding outline. The original DIV pointer and raised buttons are retained. Maximizing the Linux window enlarges the desktop continuously again; fractional scales can make bitmap strokes uneven.
+## C tools
 
-UTF-8 editing, multiple documents, file browsing and safe temporary-file saves are supported. This is an alpha: keep backups. Mixed line endings are rejected. Unicode uses one cell per scalar, with incomplete glyph coverage and no shaping or grapheme layout.
+C syntax colors are enabled automatically for `.c` and `.h` files. Use **View → Toggle C colors** (`Ctrl+K`) to change the active window's setting. **Help → C reference** opens scrollable keyword reminders based on the [C11 draft](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf).
 
-GPLv3. Based on [DIV Games Studio](https://github.com/DIVGAMES/DIV-Games-Studio). Attribution and font notices: `NOTICE`, `LICENSE`, `assets/UNICODE-FONT-LICENSE`.
-![Alt text](divseed.jpg?raw=true "Demo")
+| Command | Action |
+| --- | --- |
+| **File → Compile** (`F5`) | Compile one saved `.c` file and show diagnostics. The object file is discarded. |
+| **File → Run** (`F7`) | Compile, link, and run a saved standalone `.c` program in a temporary executable. |
+| **File → Terminal output** (`F6`) | Open the scrollable DIV output window. Press F6 again to hide it. |
+
+DIVseed looks for GCC on `PATH` first, then Clang. Compile and Run are disabled if neither is available. Save your changes before using either command. Run captures standard output, standard error, and the exit code. It is intended for short, noninteractive text programs, with no keyboard input and a 10-second runtime limit plus an output limit.
+
+## Desktop and display
+
+Drag windows and menus by their title bars. Resize editor windows from the bottom-right corner. Covered windows and menus dim, and the close button sits over the menu title gradient. The small floating clock starts in the upper-right corner, shows local time in 24-hour format, and can be dragged like a menu.
+
+The DIVseed name bar sits behind the windows, so maximized editor windows can reach the top edge. The shortcut bar remains at the bottom.
+
+The desktop starts at **960×600**. The Display menu offers preset resolutions and up to six custom sizes per session, from **800×600** to **3840×2160**. Press **Alt+Enter** to toggle desktop fullscreen. The renderer uses hardware-accelerated VSync when available and falls back to software rendering.
+
+## Text format and license
+
+DIVseed supports UTF-8 and preserves a file's uniform LF, CRLF, or CR line endings. Files with mixed line endings are rejected. The bitmap editor displays one cell per Unicode scalar with limited glyph coverage. Saves use a temporary file and check for on-disk changes before replacing the original.
+
+DIVseed is licensed under [GPLv3](LICENSE) and based on [DIV Games Studio](https://github.com/DIVGAMES/DIV-Games-Studio). See [NOTICE](NOTICE) and the [Unicode font license](assets/UNICODE-FONT-LICENSE) for attribution.

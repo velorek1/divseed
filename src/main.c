@@ -24,7 +24,10 @@ int main(int argc,char **argv) {
  if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS)) { fprintf(stderr,"%s\n",SDL_GetError()); return 1; }
  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"0");
  SDL_Window *win=SDL_CreateWindow("DIVseed",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,W,H,SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
- SDL_Renderer *renderer=win?SDL_CreateRenderer(win,-1,SDL_RENDERER_SOFTWARE):NULL;
+ SDL_Renderer *renderer=win?SDL_CreateRenderer(win,-1,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC):NULL;
+ if(win && !renderer) renderer=SDL_CreateRenderer(win,-1,SDL_RENDERER_SOFTWARE);
+ SDL_RendererInfo renderer_info={0};
+ if(renderer) SDL_GetRendererInfo(renderer,&renderer_info);
  SDL_Texture *texture=renderer?SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,SDL_TEXTUREACCESS_STREAMING,W,H):NULL;
  SDL_Surface *surface=SDL_CreateRGBSurfaceWithFormat(0,W,H,32,SDL_PIXELFORMAT_ARGB8888);
  byte *indexed=malloc(W*H);
@@ -70,13 +73,18 @@ int main(int argc,char **argv) {
  if(preview==1) {SDL_Event e={0};e.type=SDL_KEYDOWN;e.key.keysym.sym=SDLK_o;e.key.keysym.mod=KMOD_CTRL;ui_event(&e);}
  if(preview==2) {SDL_Event e={0};e.type=SDL_MOUSEMOTION;e.motion.x=20;e.motion.y=94;ui_event(&e);}
  if(preview==3) {SDL_Event e={0};e.type=SDL_KEYDOWN;e.key.keysym.sym=SDLK_F1;ui_event(&e);}
- if(preview==4) {SDL_Event e={0};e.type=SDL_MOUSEBUTTONDOWN;e.button.button=1;e.button.x=170;e.button.y=15;ui_event(&e);e.type=SDL_MOUSEBUTTONUP;ui_event(&e);}
+ if(preview==4) {
+  SDL_Event e={0};e.type=SDL_MOUSEBUTTONDOWN;e.button.button=SDL_BUTTON_LEFT;
+  e.button.x=20;e.button.y=138;ui_event(&e); /* Main Menu > Help */
+  e.button.x=370;e.button.y=177;ui_event(&e); /* Help > C reference */
+ }
  SDL_StartTextInput();
  uint32_t palette[256];
  for(int i=0;i<256;i++) palette[i]=SDL_MapRGB(surface->format,i,i,i);
  const byte rgb[][3]={{15,19,25},{43,49,57},{98,108,117},{174,186,193},{241,238,213},{25,31,38},{35,55,63},{44,66,72}};
  for(int i=0;i<8;i++) palette[i]=SDL_MapRGB(surface->format,rgb[i][0],rgb[i][1],rgb[i][2]);
  for(int i=0;i<8;i++) { palette[16+i]=SDL_MapRGB(surface->format,22+i*5,40+i*9,76+i*14); palette[32+i]=SDL_MapRGB(surface->format,70+i*17,25,32); }
+ palette[SEARCH_LINE_COLOR]=SDL_MapRGB(surface->format,64,51,29);
  palette[8]=SDL_MapRGB(surface->format,112,112,112);
  palette[9]=SDL_MapRGB(surface->format,204,204,204);
  palette[10]=SDL_MapRGB(surface->format,255,255,255);
@@ -91,6 +99,11 @@ int main(int argc,char **argv) {
  while(running) {
   SDL_Event e;
   while(SDL_PollEvent(&e)) {
+   if(e.type==SDL_RENDER_DEVICE_RESET) {
+    SDL_DestroyTexture(texture);
+    texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,SDL_TEXTUREACCESS_STREAMING,W,H);
+    if(!texture || !display_configure(renderer,texture)) goto done;
+   }
    ui_event(&e);
   }
   int width,height,fullscreen;
@@ -125,7 +138,7 @@ int main(int argc,char **argv) {
   if(SDL_UpdateTexture(texture,NULL,surface->pixels,surface->pitch) || SDL_RenderClear(renderer) || SDL_RenderCopy(renderer,texture,NULL,NULL)) goto done;
   SDL_RenderPresent(renderer);
   if(limit && ++frames>=limit) running=0;
-  SDL_Delay(16);
+  if(!(renderer_info.flags&SDL_RENDERER_PRESENTVSYNC)) SDL_Delay(16);
  }
  SDL_ShowCursor(previous_cursor);
  if(snapshot && SDL_SaveBMP(surface,snapshot)) goto done;

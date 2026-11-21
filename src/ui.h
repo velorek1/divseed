@@ -19,6 +19,8 @@ extern sscar glyphs[256];
 extern char cbs[65],cbn,cgs[65],cgn,crs[65],crn;
 #define max_windows 16
 /* Reduced from global.h:tventana; retains DIV's front-at-zero stack. */
+#define SEARCH_LINE_COLOR 24
+
 struct tventana {
  int tipo,orden,primer_plano;
  const char *titulo;
@@ -27,8 +29,10 @@ struct tventana {
  Uint32 opened_at;
  int minimized,maximized,old_x,old_y,old_an,old_al,z;
  byte *ptr;
+ int line_numbers;
  int c_syntax; /* -1: filename, 0: plain, 1: C */
  size_t syntax_revision;
+ size_t match_start,match_end,match_revision;
  byte *syntax_colors;
  Document *doc;
 };

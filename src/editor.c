@@ -1,13 +1,16 @@
 /* Adapted from DIV Games Studio src/divedit.c, commit
  * 77556912335d0a1b0efea855d4eb2490cf382128. GPL-3.0.
  * See NOTICE: read_line/write_line, f_insertar, f_suprimir,
- * f_backspace, f_inicio/f_fin and line navigation retain DIV's line cache
+ * f_backspace, f_fin and line navigation retain DIV's line cache
  * design. Explicit Document replaces v.prg; no trimming, fixed line limit,
  * compiler state, selection globals, virtual columns or implicit CRLF. */
+#define _XOPEN_SOURCE 700
 #include "editor.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <locale.h>
+#include <wctype.h>
 static void history_clear(EditHistory *h);
 static int reserve(char **p,size_t *cap,size_t need) {
  if(need<=*cap) return 1;
@@ -45,7 +48,6 @@ static void retrocede_lptr(Document *d) {
 }
 static void f_right(Document *d) {if(d->columna<=utf8_count(d->l,d->line_size)) d->columna++;}
 static void f_left(Document *d) {if(d->columna>1) d->columna--;}
-static void f_inicio(Document *d) {d->primera_columna=d->columna=1;}
 static void f_fin(Document *d) {d->columna=utf8_count(d->l,d->line_size)+1;}
 static void f_suprimir(Document *d) {
  size_t p=document_position(d);
@@ -86,8 +88,7 @@ static int key_raw(Document *d,EditKey key) {
  switch(key) {
  case ED_LEFT:f_left(d);break;
  case ED_RIGHT:f_right(d);break;
- case ED_HOME:f_inicio(d);break;
- case ED_END:f_fin(d);break;
+ case ED_HOME:case ED_END:break;
  case ED_BACKSPACE:f_backspace(d);break;
  case ED_DELETE:f_suprimir(d);break;
  case ED_ENTER:f_enter(d);break;
@@ -187,7 +188,10 @@ void document_move(Document *d,EditKey key,int extend) {
   seek_position(d,key==ED_LEFT?a:b);
  else if(extend && key==ED_LEFT && d->columna==1 && d->lptr) seek_position(d,document_position(d)-1);
  else if(extend && key==ED_RIGHT && d->columna==utf8_count(d->l,d->line_size)+1 && document_position(d)<d->file_lon) seek_position(d,document_position(d)+1);
- else key_raw(d,key);
+ else if(key==ED_HOME || key==ED_END) {
+  seek_position(d,key==ED_HOME?0:d->file_lon);
+  d->message=NULL;
+ } else key_raw(d,key);
  if(!extend) d->anchor=document_position(d);
 }
 int document_key(Document *d,EditKey key) {
@@ -253,31 +257,89 @@ void document_page(Document *d,int direction,size_t rows,int extend) {
  else {size_t max=d->num_lineas>rows?d->num_lineas-rows+1:1;
  d->primera_linea=d->primera_linea+rows>max?max:d->primera_linea+rows;}
 }
-int document_find(Document *d,const char *query) {
- size_t n=strlen(query);if(!n || !utf8_valid(query,n,1)) return 0;
- size_t pos=document_position(d);const char *hit=strstr(d->buffer+pos,query);
- if(!hit) hit=strstr(d->buffer,query);
- if(!hit) {d->message="Text not found";return 0;}
- size_t a=(size_t)(hit-d->buffer);seek_position(d,a+n);d->anchor=a;d->message=NULL;return 1;
-}
-int document_replace(Document *d,const char *query,const char *replacement,int all) {
- size_t n=strlen(query),r=strlen(replacement),a,b,count=0;
- if(!n || !utf8_valid(query,n,1) || !utf8_valid(replacement,r,1)) return 0;
- if(!all) {
-  if(!document_selection(d,&a,&b) || b-a!=n || memcmp(d->buffer+a,query,n)) {
-   if(!document_find(d,query)) return 0;
-  }
-  return r?document_paste(d,replacement):document_delete_selection(d);
+/* Track original UTF-8 byte ranges because a case pair can have different widths. */
+static size_t match_at(const char *text,size_t length,const char *query,size_t n,locale_t locale) {
+ if(!locale) return length>=n && !memcmp(text,query,n)?n:0;
+ size_t end=0;
+ for(size_t q=0;q<n;) {
+  if(end==length) return 0;
+  uint32_t actual=utf8_decode(text,length,&end),expected=utf8_decode(query,n,&q);
+  if(actual!=expected &&
+     towupper_l(towlower_l(actual,locale),locale)!=towupper_l(towlower_l(expected,locale),locale)) return 0;
  }
- for(const char *hit=d->buffer;(hit=strstr(hit,query));hit+=n) count++;
- if(!count) {d->message="Text not found";return 0;}
- if(r>n && count>(SIZE_MAX-d->file_lon-1)/(r-n)) return 0;
- size_t size=r>=n?d->file_lon+count*(r-n):d->file_lon-count*(n-r);
+ return end;
+}
+static const char *find_match(const char *text,const char *end,const char *query,size_t n,locale_t locale,size_t *width) {
+ if(!locale) {
+  *width=n;
+  return strstr(text,query);
+ }
+ while(text<end) {
+  size_t remaining=(size_t)(end-text);
+  *width=match_at(text,remaining,query,n,locale);
+  if(*width) return text;
+  text+=utf8_next(text,remaining,0);
+ }
+ return NULL;
+}
+static int select_match(Document *d,const char *query,size_t n,locale_t locale) {
+ size_t width;
+ const char *end=d->buffer+d->file_lon;
+ const char *hit=find_match(d->buffer+document_position(d),end,query,n,locale,&width);
+ if(!hit) hit=find_match(d->buffer,end,query,n,locale,&width);
+ if(!hit) {d->message="Text not found";return 0;}
+ size_t start=(size_t)(hit-d->buffer);
+ seek_position(d,start+width);d->anchor=start;d->message=NULL;
+ return 1;
+}
+static locale_t search_locale(void) {
+ locale_t locale=newlocale(LC_CTYPE_MASK,"C.UTF-8",(locale_t)0);
+ return locale?locale:newlocale(LC_CTYPE_MASK,"C",(locale_t)0);
+}
+int document_find(Document *d,const char *query,int match_case) {
+ size_t n=strlen(query);
+ if(!n || !utf8_valid(query,n,1)) return 0;
+ locale_t locale=match_case?(locale_t)0:search_locale();
+ int found=select_match(d,query,n,locale);
+ if(locale) freelocale(locale);
+ return found;
+}
+static int replace_all(Document *d,const char *query,size_t n,const char *replacement,locale_t locale) {
+ size_t r=strlen(replacement),size=d->file_lon,width;
+ const char *end=d->buffer+d->file_lon,*src=d->buffer,*hit;
+ int found=0;
+ while((hit=find_match(src,end,query,n,locale,&width))) {
+  found=1;
+  size-=width;
+  if(r>SIZE_MAX-size-1) {d->message="Replacement is too large";return 0;}
+  size+=r;
+  src=hit+width;
+ }
+ if(!found) {d->message="Text not found";return 0;}
  char *text=malloc(size+1);if(!text) {d->message="Out of memory: text unchanged";return 0;}
- const char *src=d->buffer,*hit;char *out=text;
- while((hit=strstr(src,query))) {size_t len=(size_t)(hit-src);memcpy(out,src,len);out+=len;memcpy(out,replacement,r);out+=r;src=hit+n;}
+ char *out=text;
+ src=d->buffer;
+ while((hit=find_match(src,end,query,n,locale,&width))) {
+  size_t len=(size_t)(hit-src);memcpy(out,src,len);out+=len;
+  memcpy(out,replacement,r);out+=r;src=hit+width;
+ }
  strcpy(out,src);
  if(!prepare(d,size>d->file_lon?size-d->file_lon:0)) {free(text);return 0;}
  EditSnapshot *old=snapshot(d);if(!old) {free(text);return 0;}
- memcpy(d->buffer,text,size+1);d->file_lon=size;free(text);seek_position(d,0);commit(d,old);return 1;
+ memcpy(d->buffer,text,size+1);d->file_lon=size;free(text);seek_position(d,0);commit(d,old);
+ return 1;
+}
+int document_replace(Document *d,const char *query,const char *replacement,int all,int match_case) {
+ size_t n=strlen(query),a,b;
+ if(!n || !utf8_valid(query,n,1) || !utf8_valid(replacement,strlen(replacement),1)) return 0;
+ locale_t locale=match_case?(locale_t)0:search_locale();
+ int result;
+ if(all) result=replace_all(d,query,n,replacement,locale);
+ else {
+  int selected=document_selection(d,&a,&b) && match_at(d->buffer+a,b-a,query,n,locale)==b-a;
+  result=(selected || select_match(d,query,n,locale)) &&
+         (*replacement?document_paste(d,replacement):document_delete_selection(d));
+ }
+ if(locale) freelocale(locale);
+ return result;
 }
