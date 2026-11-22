@@ -1,6 +1,8 @@
 # DIVseed — alpha 0.4
 
-DIVseed is a small Linux text editor derived from DIV Games Studio. This AI-assisted experiment brings DIV's bitmap fonts, raised buttons, floating menus, and desktop animations to a multi-document editor with built-in C tools.
+DIVseed is a small Linux text editor derived from DIV Games Studio 2. This AI-assisted experiment brings DIV's bitmap fonts, raised buttons, floating menus, and desktop animations to a multi-document editor with built-in C tools.
+
+Full credit to Daniel Navarro, the original programmer DIV Games Studio, and MikeDX, for his work porting DIV Games Studio to modern systems. (https://github.com/DIVGAMES/DIV-Games-Studio)
 
 ![DIVseed editor screenshot](divseed.jpg)
 
