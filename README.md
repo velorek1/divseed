@@ -1,8 +1,6 @@
 # DIVseed — alpha 0.4
 
-DIVseed is a small Linux text editor derived from DIV Games Studio 2. This AI-assisted experiment brings DIV's bitmap fonts, raised buttons, floating menus, and desktop animations to a multi-document editor with built-in C tools.
-
-Full credit to Daniel Navarro, the original programmer DIV Games Studio, and MikeDX, for his work porting DIV Games Studio to modern systems. (https://github.com/DIVGAMES/DIV-Games-Studio)
+DIVseed is a small Linux text editor derived from DIV Games Studio. This AI-assisted experiment brings DIV's bitmap fonts, raised buttons, floating menus, and desktop animations to a multi-document editor with built-in C tools.
 
 ![DIVseed editor screenshot](divseed.jpg)
 
@@ -62,7 +60,7 @@ Drag windows and menus by their title bars. Resize editor windows from the botto
 
 The DIVseed name bar sits behind the windows, so maximized editor windows can reach the top edge. The shortcut bar remains at the bottom.
 
-The desktop starts at **960×600**. The Display menu offers preset resolutions and up to six custom sizes per session, from **800×600** to **3840×2160**. Press **Alt+Enter** to toggle desktop fullscreen. The renderer uses hardware-accelerated VSync when available and falls back to software rendering.
+The desktop starts at **960×600**. The Display menu offers preset resolutions and up to six custom sizes per session, from **800×600** to **3840×2160**. Press **F8** to cycle through the presets and any custom resolutions. **F9** restores the default **960×600** windowed display, even from fullscreen. **Alt+Enter** toggles desktop fullscreen. The renderer uses hardware-accelerated VSync when available and falls back to software rendering.
 
 ## Text format and license
 

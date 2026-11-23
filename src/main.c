@@ -10,7 +10,7 @@ int main(int argc,char **argv) {
    if(file_count==16) {fprintf(stderr,"At most 16 files can be opened.\n");return 2;}files[file_count++]=argv[i];
   }
   else if(!strcmp(argv[i],"--")) end_options=1;
-  else if(!strcmp(argv[i],"--help")) {puts("Usage: divseed [--] [file ...]\nAlt+Enter: fullscreen. Display menu: resolutions.");return 0;}
+  else if(!strcmp(argv[i],"--help")) {puts("Usage: divseed [--] [file ...]\nAlt+Enter: fullscreen. F8: cycle resolutions. F9: restore default windowed display.");return 0;}
   else if(!strcmp(argv[i],"--demo-reference")) {demo=1;preview=4;}
   else if(!strcmp(argv[i],"--demo-dialog")) {demo=1;preview=1;}
   else if(!strcmp(argv[i],"--demo-help")) {demo=1;preview=3;}
@@ -106,9 +106,15 @@ int main(int argc,char **argv) {
    }
    ui_event(&e);
   }
-  int width,height,fullscreen;
-  if(ui_display_request(&width,&height,&fullscreen)) {
-   if(fullscreen && !display_toggle_fullscreen(win)) ui_error(SDL_GetError());
+  int width,height;
+  DisplayAction action;
+  if(ui_display_request(&width,&height,&action)) {
+   if(action==DISPLAY_TOGGLE_FULLSCREEN && !display_toggle_fullscreen(win)) ui_error(SDL_GetError());
+   if(action==DISPLAY_RESTORE_DEFAULT) {
+    Uint32 flags=SDL_GetWindowFlags(win);
+    if((flags&SDL_WINDOW_FULLSCREEN) && SDL_SetWindowFullscreen(win,0)) ui_error(SDL_GetError());
+    if(SDL_GetWindowFlags(win)&SDL_WINDOW_MAXIMIZED) SDL_RestoreWindow(win);
+   }
    if(width && (width!=W || height!=H)) {
     SDL_Surface *next_surface=SDL_CreateRGBSurfaceWithFormat(0,width,height,32,SDL_PIXELFORMAT_ARGB8888);
     byte *next_indexed=malloc((size_t)width*height);
@@ -119,9 +125,11 @@ int main(int argc,char **argv) {
      SDL_FreeSurface(surface);free(indexed);SDL_DestroyTexture(texture);
      surface=next_surface;indexed=next_indexed;texture=next_texture;
      if(!display_configure(renderer,texture)) goto done;
-     if(!(SDL_GetWindowFlags(win)&SDL_WINDOW_FULLSCREEN_DESKTOP)) SDL_SetWindowSize(win,W,H);
+     if(action!=DISPLAY_RESTORE_DEFAULT && !(SDL_GetWindowFlags(win)&SDL_WINDOW_FULLSCREEN)) SDL_SetWindowSize(win,W,H);
     }
    }
+   if(action==DISPLAY_RESTORE_DEFAULT && !(SDL_GetWindowFlags(win)&SDL_WINDOW_FULLSCREEN))
+    SDL_SetWindowSize(win,W,H);
   }
   if(ui_quit_ready()) running=0;
   ui_draw(indexed);

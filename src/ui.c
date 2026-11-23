@@ -10,7 +10,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <time.h>
-int ui_width=960,ui_height=600;
+int ui_width=UI_DEFAULT_WIDTH,ui_height=UI_DEFAULT_HEIGHT;
 #include <sys/stat.h>
 #define W UI_WIDTH
 #define H UI_HEIGHT
@@ -63,7 +63,7 @@ static SDL_Rect press_rect;
 static int press_active;
 static byte modal_pixels[MW*MH];
 static const char *help_lines[]={
- "DIVseed - commands and options", "", "DOCUMENTS", "F5               Compile saved C file", "F6               Show / hide terminal output", "F7               Run saved C program", "Ctrl+N           New document", "Ctrl+O           Open file", "Ctrl+S           Save", "Ctrl+Shift+S     Save As", "Ctrl+W           Close document", "Esc              Exit (asks about changes)", "", "EDITING", "Arrows           Move cursor", "Home / End       Start / end of file", "Page Up / Down   Move one visible page", "Ctrl+F / Ctrl+H   Find / replace", "Ctrl+G           Go to line", "Ctrl+L           Show or hide line numbers", "Enter            Split line", "Backspace        Delete previous character", "Delete           Delete next character", "Tab              Insert four spaces", "Ctrl+K           Toggle C colors", "", "SELECTION AND CLIPBOARD", "Shift + movement Extend selection", "Mouse drag       Select text", "Ctrl+A           Select all", "Ctrl+C / X / V   Copy / cut / paste", "Ctrl+Z           Undo", "Ctrl+Y           Redo", "Ctrl+Shift+Z     Redo", "", "DESKTOP", "Drag title       Move window or dialog", "Bottom-right     Resize editor window", "Title buttons    Minimize / maximize / close", "Wheel / bars     Scroll editor", "Floating menus   Drag their title to move", "F1               Open this help", "Alt+Enter        Toggle fullscreen", "Display menu     Choose or add a resolution", "Help / C reference  Scroll C11 keyword reminders", "View / Toggle C colors  C syntax on or off", "", "FILE PICKER", "Click folder     Enter directory", "Double-click     Open selected file", "Tab / Shift+Tab  Cycle picker controls", "Enter / Accept   Activate focused control", "Esc / Cancel     Keep editing", "Ctrl+A in field  Clear file name", "Wheel / arrows   Scroll each file list", "Type             All files or *.txt", "", "TEXT FORMAT", "UTF-8            One cell per Unicode scalar", "Missing glyph    Marker; original bytes retained", "LF / CRLF / CR   Uniform endings preserved", "Mixed endings    Rejected without changing file", "", "HELP NAVIGATION", "Wheel, Up/Down, Page Up/Down", "Home / End       First / last help page", "Drag scrollbar   Move through help", "OK, Enter, Esc   Close help"};
+ "DIVseed - commands and options", "", "DOCUMENTS", "F5               Compile saved C file", "F6               Show / hide terminal output", "F7               Run saved C program", "Ctrl+N           New document", "Ctrl+O           Open file", "Ctrl+S           Save", "Ctrl+Shift+S     Save As", "Ctrl+W           Close document", "Esc              Exit (asks about changes)", "", "EDITING", "Arrows           Move cursor", "Home / End       Start / end of file", "Page Up / Down   Move one visible page", "Ctrl+F / Ctrl+H   Find / replace", "Ctrl+G           Go to line", "Ctrl+L           Show or hide line numbers", "Enter            Split line", "Backspace        Delete previous character", "Delete           Delete next character", "Tab              Insert four spaces", "Ctrl+K           Toggle C colors", "", "SELECTION AND CLIPBOARD", "Shift + movement Extend selection", "Mouse drag       Select text", "Ctrl+A           Select all", "Ctrl+C / X / V   Copy / cut / paste", "Ctrl+Z           Undo", "Ctrl+Y           Redo", "Ctrl+Shift+Z     Redo", "", "DESKTOP", "Drag title       Move window or dialog", "Bottom-right     Resize editor window", "Title buttons    Minimize / maximize / close", "Wheel / bars     Scroll editor", "Floating menus   Drag their title to move", "F1               Open this help", "Alt+Enter        Toggle fullscreen", "F8               Cycle resolutions", "F9               Restore default windowed display", "Display menu     Choose or add a resolution", "Help / C reference  Scroll C11 keyword reminders", "View / Toggle C colors  C syntax on or off", "", "FILE PICKER", "Click folder     Enter directory", "Double-click     Open selected file", "Tab / Shift+Tab  Cycle picker controls", "Enter / Accept   Activate focused control", "Esc / Cancel     Keep editing", "Ctrl+A in field  Clear file name", "Wheel / arrows   Scroll each file list", "Type             All files or *.txt", "", "TEXT FORMAT", "UTF-8            One cell per Unicode scalar", "Missing glyph    Marker; original bytes retained", "LF / CRLF / CR   Uniform endings preserved", "Mixed endings    Rejected without changing file", "", "HELP NAVIGATION", "Wheel, Up/Down, Page Up/Down", "Home / End       First / last help page", "Drag scrollbar   Move through help", "OK, Enter, Esc   Close help"};
 #define HELP_ROWS 12
 static int search_dialog(void) {return dialog==8 || dialog==9;}
 static int scroll_dialog(void) {return dialog==5 || dialog==6 || dialog==DIALOG_COMPILER;}
@@ -85,14 +85,28 @@ static const char *file_items[]={"New       Ctrl+N","Open      Ctrl+O","Save    
 static const char *edit_items[]={"Undo","Redo","Cut","Copy","Paste","Select All","Find      Ctrl+F","Replace   Ctrl+H","Go to line   Ctrl+G"};
 static const char *view_items[]={"Minimize","Maximize / Restore","Toggle C colors  Ctrl+K","0 Line numbers  Ctrl+L"};
 static const char *help_items[]={"Commands / F1","C reference","About"};
-static int requested_w,requested_h,requested_fullscreen;
+static int requested_w,requested_h;
+static DisplayAction requested_display;
 static char resolution_input[32]="960x600";
 static int resolution_count=6;
-static int resolutions[12][2]={{800,600},{960,600},{1024,768},{1280,720},{1280,800},{1920,1080}};
+static int resolutions[12][2]={{800,600},{UI_DEFAULT_WIDTH,UI_DEFAULT_HEIGHT},{1024,768},{1280,720},{1280,800},{1920,1080}};
 static char resolution_labels[14][40];
 static const char *display_items[14];
 static Menu menus[]={ {8,42,190,160,1,0,"MAIN MENU",main_items,6,0}, {170,42,230,226,0,0,"File",file_items,9,0}, {170,208,220,226,0,0,"Edit",edit_items,9,0}, {360,42,220,116,0,0,"View",view_items,4,0}, {360,120,180,94,0,0,"Help",help_items,3,0}, {360,42,270,204,0,0,"Display",display_items,8,0},
  [CLOCK_WIDGET]={842,07,110,20,1,0,NULL,NULL,0,0} };
+static void request_preset(int index) {
+ requested_w=resolutions[index][0];
+ requested_h=resolutions[index][1];
+}
+static void cycle_resolution(void) {
+ int width=requested_w?requested_w:W;
+ int height=requested_h?requested_h:H;
+ for(int i=0;i<resolution_count;i++) if(resolutions[i][0]==width && resolutions[i][1]==height) {
+  request_preset((i+1)%resolution_count);
+  return;
+ }
+ request_preset(0);
+}
 static void display_labels(void) {
  for(int i=0;i<resolution_count;i++) {snprintf(resolution_labels[i],40,"%s%d x %d",resolutions[i][0]==W && resolutions[i][1]==H?"* ":"",resolutions[i][0],resolutions[i][1]);display_items[i]=resolution_labels[i];}
  display_items[resolution_count]="Add resolution...";display_items[resolution_count+1]="Fullscreen  Alt+Enter";
@@ -557,9 +571,9 @@ static void menu_action(int m,int row) {
   help_first=0;
  }
  if(m==5) {
-  if(row<resolution_count) {requested_w=resolutions[row][0];requested_h=resolutions[row][1];}
+  if(row<resolution_count) request_preset(row);
   else if(row==resolution_count) {dialog=7;notice[0]=0;snprintf(resolution_input,sizeof resolution_input,"%dx%d",W,H);}
-  else requested_fullscreen=1;
+  else requested_display=DISPLAY_TOGGLE_FULLSCREEN;
  }
 }
 static int menu_hit(int x,int y,int window_z) {
@@ -629,10 +643,11 @@ int ui_request_resolution(const char *text) {
 invalid:
  snprintf(notice,sizeof notice,"Use WIDTHxHEIGHT within 800x600 - 3840x2160.");return 0;
 }
-int ui_display_request(int *width,int *height,int *fullscreen) {
- *width=requested_w;*height=requested_h;*fullscreen=requested_fullscreen;
- int requested=requested_w || requested_fullscreen;
- requested_w=requested_h=requested_fullscreen=0;return requested;
+int ui_display_request(int *width,int *height,DisplayAction *action) {
+ *width=requested_w;*height=requested_h;*action=requested_display;
+ int requested=requested_w || requested_display!=DISPLAY_KEEP;
+ requested_w=requested_h=0;
+ requested_display=DISPLAY_KEEP;return requested;
 }
 int ui_set_resolution(int width,int height) {
  if(width<800 || width>3840 || height<600 || height>2160) return 0;
@@ -969,7 +984,19 @@ static int button_at(int x,int y,SDL_Rect *out) {
 void ui_event(const SDL_Event *input) {
  sync_modal();SDL_Event mapped=*input;
  if(input->type==SDL_KEYDOWN || input->type==SDL_TEXTINPUT || input->type==SDL_MOUSEBUTTONDOWN) caret_epoch=SDL_GetTicks();
- if(input->type==SDL_KEYDOWN && input->key.keysym.sym==SDLK_RETURN && (input->key.keysym.mod&KMOD_ALT)) {if(!input->key.repeat) requested_fullscreen=1;return;}
+ if(input->type==SDL_KEYDOWN && (input->key.keysym.sym==SDLK_F8 || input->key.keysym.sym==SDLK_F9)) {
+  if(!input->key.repeat) {
+   press_active=0;
+   if(input->key.keysym.sym==SDLK_F8) cycle_resolution();
+   else {
+    requested_w=UI_DEFAULT_WIDTH;
+    requested_h=UI_DEFAULT_HEIGHT;
+    requested_display=DISPLAY_RESTORE_DEFAULT;
+   }
+  }
+  return;
+ }
+ if(input->type==SDL_KEYDOWN && input->key.keysym.sym==SDLK_RETURN && (input->key.keysym.mod&KMOD_ALT)) {if(!input->key.repeat) requested_display=DISPLAY_TOGGLE_FULLSCREEN;return;}
  int is_modal=dialog || pending;
  if(input->type==SDL_WINDOWEVENT && input->window.event==SDL_WINDOWEVENT_FOCUS_LOST) {press_active=modal_drag=help_drag=0;handle_event(input);return;}
  if(input->type==SDL_KEYDOWN) press_active=0;

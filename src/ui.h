@@ -2,6 +2,8 @@
 #define DIVSEED_UI_H
 #include "editor.h"
 extern int ui_width,ui_height;
+#define UI_DEFAULT_WIDTH 960
+#define UI_DEFAULT_HEIGHT 600
 #define UI_WIDTH ui_width
 #define UI_HEIGHT ui_height
 #include <SDL.h>
@@ -63,7 +65,8 @@ void ui_draw(byte*);
 void ui_animations(int enabled);
 int ui_set_resolution(int width,int height);
 int ui_request_resolution(const char *text);
-int ui_display_request(int *width,int *height,int *fullscreen);
+typedef enum {DISPLAY_KEEP,DISPLAY_TOGGLE_FULLSCREEN,DISPLAY_RESTORE_DEFAULT} DisplayAction;
+int ui_display_request(int *width,int *height,DisplayAction *action);
 void ui_error(const char *message);
 int ui_open(const char *path);
 void ui_draw_pointer(byte*,int,int);
